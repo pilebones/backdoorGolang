@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	// "fmt"
 	"github.com/pilebones/backdoorGolang/core/cli"
 )
 

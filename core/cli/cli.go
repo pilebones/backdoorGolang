@@ -84,7 +84,7 @@ func generateContextFromFlags() Context {
 
 	// Resolv hostname as net.IP
 	var ip net.IP = net.ParseIP(*host)
-	if (ip == nil) { // if argument isn't IP => check if the hostname can be resolved
+	if ip == nil { // if argument isn't IP => check if the hostname can be resolved
 		ips, err := net.LookupIP(*host)
 		if err != nil {
 			panic(fmt.Sprintf("Couln't resolv hostname \"%s\"", *host))

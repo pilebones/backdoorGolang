@@ -47,18 +47,26 @@ func UseListenMode() bool {
 func UseVersionMode() bool {
 	return UseMode(isVerboseMode)
 }
+
 /** Parse arguments and check value is allowed */
-func InitFlags() {
+func InitFlags() Context {
 	pflag.Parse()
 	if UseVersionMode() {
 		fmt.Printf("%s : Build %s Version %s\nAuthor : %s (see: %s)", common.PRODUCT_NAME, common.BUILD, common.VERSION, common.AUTHOR, common.CONTACT)
 		os.Exit(0)
 	}
 
+	context := new(Context)
+	context.Host = *host
+	context.Port = *port
+	context.IsHostIsResolved = false
+	context.UseDebugMode = UseDebugMode()
+	context.UseListenMode = UseListenMode()
+	context.UseVerboseMode = UseVersionMode()
+
 	DisplayAsDebug("Debug mode enabled")
 
 	// Resolv hostname as net.IP
-	DisplayAsDebug(fmt.Sprintf("Host : %s", *host))
 	var ip net.IP = net.ParseIP(*host)
 	if (ip == nil) { // if argument isn't IP => check if the hostname can be resolved
 		ips, err := net.LookupIP(*host)
@@ -66,20 +74,22 @@ func InitFlags() {
 			fmt.Errorf("Couln't resolv hostname \"%s\", error : %v", *host, err)
 			os.Exit(1);
 		} else {
+			context.Host = *host
 			if 1 < len(ips) {
-				var ipv6 net.IP = ips[0]
-				var ipv4 net.IP = ips[1]
-				DisplayAsDebug(fmt.Sprintf("IPv6: %s\nIPv4: %s", ipv6.String(), ipv4.String()))
+				context.IsHostIsResolved = true
+				context.Ipv4 = ips[1]
+				context.Ipv6 = ips[0]
 			} else {
 				fmt.Errorf("Couln't resolv from hostname IPv4  \"%s\"", *host)
 				os.Exit(1)
 			}
 		}
 	} else {
-		DisplayAsDebug(fmt.Sprintf("IP %s", ip.String()))
+		context.Ipv4 = ip.To4()
+		context.Ipv6 = ip.To16()
 	}
 
-	DisplayAsDebug(fmt.Sprintf("Port : %d", *port))
-	DisplayAsDebug(fmt.Sprintf("isListenMode : %t", UseListenMode()))
-	DisplayAsDebug(fmt.Sprintf("isVerboseMode : %t", UseVersionMode()))
+	DisplayAsDebug(context.ToString())
+
+	return *context
 }

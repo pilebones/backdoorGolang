@@ -50,12 +50,28 @@ func UseVersionMode() bool {
 
 /** Parse arguments and check value is allowed */
 func InitFlags() Context {
+
+	// Handle errors in defer func with recover.
+	defer func() {
+		if err := recover(); err != nil {
+			// Handle our error.
+			fmt.Println("Error : ", err)
+			os.Exit(1)
+		}
+	}()
+
 	pflag.Parse()
+
 	if UseVersionMode() {
 		fmt.Printf("%s : Build %s Version %s\nAuthor : %s (see: %s)", common.PRODUCT_NAME, common.BUILD, common.VERSION, common.AUTHOR, common.CONTACT)
 		os.Exit(0)
 	}
 
+	return generateContextFromFlags()
+}
+
+/** Parse, Validate flags and generate CLI context Object from CLI Arguments */
+func generateContextFromFlags() Context {
 	context := new(Context)
 	context.Host = *host
 	context.Port = *port
@@ -71,8 +87,7 @@ func InitFlags() Context {
 	if (ip == nil) { // if argument isn't IP => check if the hostname can be resolved
 		ips, err := net.LookupIP(*host)
 		if err != nil {
-			fmt.Errorf("Couln't resolv hostname \"%s\", error : %v", *host, err)
-			os.Exit(1);
+			panic(fmt.Sprintf("Couln't resolv hostname \"%s\"", *host))
 		} else {
 			context.Host = *host
 			if 1 < len(ips) {
@@ -80,8 +95,7 @@ func InitFlags() Context {
 				context.Ipv4 = ips[1]
 				context.Ipv6 = ips[0]
 			} else {
-				fmt.Errorf("Couln't resolv from hostname IPv4  \"%s\"", *host)
-				os.Exit(1)
+				panic(fmt.Sprintf("Couln't resolv from hostname IPv4  \"%s\"", *host))
 			}
 		}
 	} else {

@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"net"
-	"github.com/pilebones/backdoorGolang/core/socket"
 )
 
 type Context struct {
@@ -38,15 +37,4 @@ isDebugMode : %t
 		c.UseVerboseMode,
 		c.UseDebugMode,
 	)
-}
-
-func (c Context) CastToSocketWrapper() socket.SocketWrapper {
-	var wrapper = new(socket.SocketWrapper)
-	wrapper.Host = c.Host
-	wrapper.Port = c.Port
-	wrapper.IsHostIsResolved = c.IsHostIsResolved
-	wrapper.Ipv4 = c.Ipv4
-	wrapper.Ipv6 = c.Ipv6
-
-	return * wrapper
 }

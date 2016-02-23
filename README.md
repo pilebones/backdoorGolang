@@ -9,11 +9,16 @@ A fork of my own project named : "pilebones/backdoorBash" (see: https://github.c
 
 ## Requirements
 
-- Golang SDK : Compiler and tools for the Go programming language from Google
+- Golang SDK : Compiler and tools for the Go programming language from Google (see: https://golang.org/doc/install)
 
 From Arch Linux :
 ```bash
 (sudo) pacman -S community/go
+```
+
+From Debian :
+```bash
+(sudo) apt-get install golang-go
 ```
 
 ## Installation

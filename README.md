@@ -49,6 +49,8 @@ Usage of ./bin/backdoorGolang:
 ./bin/backdoorGolang -h localhost -p 1234
 ```
 
+Notice : Server is multi-user capable (one server for X client)
+
 ## Client-mode
 
 /!\ Not implemented yet, use netcat meanwhile !

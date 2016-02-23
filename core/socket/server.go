@@ -8,7 +8,9 @@ import (
 )
 
 const (
+	// Threshold : Limit of simultanous message between client from channel
 	BUFFER_CLIENT_NB_MESSAGE_THRESHOLD = 200
+	// Threshold : Limit of buffer size for socket
 	BUFFER_SIZE = 1024
 )
 

@@ -14,7 +14,7 @@ var (
 	isListenMode 	= pflag.BoolP("listen", "l", false, "Enable listen mode (server socket mode)")
 	isVerboseMode 	= pflag.BoolP("verbose", "v", false, "Enable mode verbose")
 	isDebugMode 	= pflag.BoolP("debug", "d", false, "Enable mode debug")
-	isVersionMode 	= pflag.BoolP("version", "", false, "Display version number")
+	isVersionMode 	= pflag.BoolP("version", "V", false, "Display version number")
 )
 
 /** Print data when debug mode is enabled */

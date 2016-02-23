@@ -133,7 +133,7 @@ func ClientSender(client *Client) {
 			// Standard message receive by the server from a client
 			case buffer := <- client.Incoming:
 				fmt.Println("[SERVER] Sending to ", clientId.String(), ":")
-				client.SendMessage(string(buffer))
+				client.SendMessage(buffer)
 			// Logout instruction
 			case <- client.Quit:
 				fmt.Println("Client ", clientId.String(), " quitting")
@@ -158,20 +158,19 @@ func ClientReceiver(client *Client) {
 		cleanedBuffer := cleanBuffer(buffer) // Remove zero bytes from buffer[BUFFER_SIZE]
 		messageTrimmed := strings.TrimSpace(string(cleanedBuffer))
 		if 0 == len(messageTrimmed) {
-			// continue // Skip empty message
+			continue // Skip empty message
 		}
 
 		fmt.Printf("ClientReader receiver from %s : \"%s\"\n", clientId.String(), messageTrimmed)
-		bufferTrimmed 	:= bytes.NewBufferString(messageTrimmed).Bytes() // buffer message whithout "\n"
+		bufferTrimmed := bytes.NewBufferString(messageTrimmed).Bytes() // buffer message whithout "\n"
 		if (bytes.Equal(bufferTrimmed, []byte("/quit"))) {
 			// if (bytes.Equal(bufferTrimmed, logoutMessage)) { // Logout Instruction
-			fmt.Printf("LOGOUT INSTRUCTIONSTRING !\n")
 			client.Close()
 			break;
 		}
 
 		// Sending message to client
-		client.Outgoing <- fmt.Sprintf("[%s] %s", clientId.String(), messageTrimmed)
+		client.Outgoing <- fmt.Sprintf("[%s] %s\n", clientId.String(), string(bufferTrimmed))
 
 		// Erase all data from buffer
 		for i:= 0; i < BUFFER_SIZE; i++ {
@@ -180,4 +179,22 @@ func ClientReceiver(client *Client) {
 	}
 
 	client.Outgoing <- fmt.Sprintf("[%s] has left the server", clientId.String())
+}
+
+/**
+ * Remove from buffer empty data (zero bytes)
+ *
+ * @param buffer []byte
+ */
+func cleanBuffer(buffer []byte) []byte {
+	count := 0
+	// Add End-line char to buffer before sending
+	for i := 0; i < len(buffer); i++ {
+		if buffer[i] == 0x00 {
+			break
+		}
+		count++
+	}
+
+	return []byte(buffer)[0:count]
 }

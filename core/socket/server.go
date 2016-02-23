@@ -3,13 +3,12 @@ package socket
 import (
 	"fmt"
 	"net"
-	"bufio"
-	"strings"
 	"container/list"
 	"bytes"
 )
 
 const (
+	BUFFER_CLIENT_NB_MESSAGE_THRESHOLD = 200
 	BUFFER_SIZE = 1024
 )
 
@@ -34,8 +33,9 @@ func CreateServer(host string, port int, useDebugMode bool) ServerProvider {
 
 func (s ServerProvider) Start() {
 
-	in := make(chan string) // Pipe between all clients, this pipe relay all message receive from clients to all clients
-	go IOHandler(in, s.Clients) // Init channel for clients (async management)
+	// Pipe between all clients, this pipe relay all message receive from clients to all clients
+	in := make(chan string, BUFFER_CLIENT_NB_MESSAGE_THRESHOLD) // Limit number of simultaneous message with a threshold to avoid server DOS
+	go IOHandler(in, s.Clients) // Init clients channel for message (async management)
 
 	// Listen on all <host>:<port>
 	serverAddr := fmt.Sprintf("%s:%d", s.Host, s.Port)
@@ -58,7 +58,7 @@ func (s ServerProvider) Start() {
 		}
 
 		fmt.Print("[SERVER][" + serverAddr + "] Connection receive from ", connection.RemoteAddr(), "\n")
-		go ClientHandler(connection, in, s.Clients)
+		go ClientHandler(connection, in, s.Clients) // Manage all clients asychronously
 	}
 }
 
@@ -71,29 +71,44 @@ func (s ServerProvider) Start() {
 func IOHandler(Incoming <- chan string, clients *list.List) {
 	for {
 		// fmt.Println("IOHandler : Waiting for input")
+		// Waiting incoming message from a client
 		input := <- Incoming
 		// fmt.Println("IOHandler : Handling ", input)
 		for element := clients.Front(); element != nil; element = element.Next() {
 			client := element.Value.(Client)
-			client.Incoming <-input
+			client.Incoming <-input // Notify all clients for this message
 		}
 	}
 }
 
-func ClientHandler(connection net.Conn, ch chan string, clients *list.List) {
-	newClient := & Client{ make(chan string), ch, connection, make(chan bool), clients }
-	go ClientSender(newClient)
-	go ClientReceiver(newClient)
+/**
+ * Manage I/O client from server socket
+ *
+ * @param connection - Socket between client and server
+ * @param messageChannel - The shared bus message between all clients
+ * @param clients - The list of all clients connected
+ */
+func ClientHandler(connection net.Conn, messageChannel chan string, clients *list.List) {
+	// Create new client instance
+	newClient := & Client{ make(chan string), messageChannel, connection, make(chan bool), clients }
+	go ClientSender(newClient) // Manage sending message
+	go ClientReceiver(newClient) // Manage receiving message
 	clients.PushBack(*newClient) // Register client to server list of connected clients
 
-	ch <- fmt.Sprintf("Another client as joined the server %s\n", connection.RemoteAddr().String())
+	// Notify all clients for the new connection
+	messageChannel <- fmt.Sprintf("Another client as joined the server %s\n", connection.RemoteAddr().String())
 }
 
+/**
+ * Manage client input from server-side socket
+ *
+ * @param client - Client object
+ */
 func ClientReceiver(client *Client) {
 	clientId := client.Connection.RemoteAddr()
 
 	buffer := make([]byte, BUFFER_SIZE)
-	for client.Read(buffer) {
+	for client.Read(buffer) { // While read data from server-side socket
 		if (bytes.Equal(buffer, []byte("/quit"))) { // Logout Instruction
 			client.Close()
 			break;
@@ -102,6 +117,7 @@ func ClientReceiver(client *Client) {
 		message := string(buffer)
 		fmt.Printf("ClientReader receiver : " + clientId.String() + " : " + message)
 
+		// Sending message to client
 		client.Outgoing <- fmt.Sprintf("[%s] %s", clientId.String(), message)
 		for i:= 0; i < BUFFER_SIZE; i++ {
 			buffer[i] = 0x00; // Char End-Line
@@ -111,11 +127,16 @@ func ClientReceiver(client *Client) {
 	client.Outgoing <- fmt.Sprintf("[%s] has left the server", clientId.String())
 }
 
+/**
+ * Manage output from server-side socket
+ *
+ * @param client - Client object
+ */
 func ClientSender(client *Client) {
 	clientId := client.Connection.RemoteAddr()
 	for {
 		select {
-			// Message standard reçu par le client
+			// Standard message receive by the server from a client
 			case buffer := <- client.Incoming:
 				count := 0
 				// Add End-line char to buffer before sending
@@ -136,21 +157,5 @@ func ClientSender(client *Client) {
 				break
 
 		}
-	}
-}
-
-
-
-func (s ServerProvider) manageClient(conn net.Conn) {
-	// infinite loop (until ctrl-c)
-	for {
-		// will listen for message to process ending in newline (\n)
-		message, _ := bufio.NewReader(conn).ReadString('\n')
-		// output message received
-		fmt.Print("Message Received:", string(message))
-		// sample process for string received
-		newmessage := strings.ToUpper(message)
-		// send new string back to client
-		conn.Write([]byte(newmessage + "\n"))
 	}
 }

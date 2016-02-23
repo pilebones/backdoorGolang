@@ -8,14 +8,17 @@ import (
 
 /** Client structure */
 type Client struct {
-	Incoming chan string
-	Outgoing chan string
-	Connection net.Conn
-	Quit chan bool
-	Clients *list.List
+	Incoming chan string // Message Channel : Input
+	Outgoing chan string // Message Channel : Output
+	Connection net.Conn // Socket between client and server
+	Quit chan bool // Message Channel which contains the state of connection
+	Clients *list.List // List of clients connected from server
 }
 
-/** */
+/**
+ * Read data from client socket
+ * @param buffer
+ */
 func (c Client) Read(buffer []byte) bool {
 	bytesRead, error := c.Connection.Read(buffer)
 	if (error != nil) {
@@ -27,6 +30,9 @@ func (c Client) Read(buffer []byte) bool {
 	return true
 }
 
+/**
+ * Manage client logout
+ */
 func (c Client) Close() {
 	c.Quit <- true
 	c.Connection.Close()
@@ -34,6 +40,9 @@ func (c Client) Close() {
 	fmt.Println("Client disconnected")
 }
 
+/**
+ * Remove client from the list of connected users
+ */
 func (c Client) RemoveMe() {
 	for element := c.Clients.Front(); element != nil; element = element.Next() {
 		client := element.Value.(Client)

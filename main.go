@@ -17,7 +17,6 @@ func main() {
 	}
 
 	if context.UseListenMode { // Server mode
-		fmt.Printf("Init server mode : feature not fully implemented yet work in progress\n")
 		fmt.Printf("Listening on %s:%d\n", context.Host, context.Port)
 		var server socket.ServerProvider = socket.CreateServer(context.Host, context.Port, context.UseDebugMode)
 		server.Start()

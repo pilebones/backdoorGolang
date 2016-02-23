@@ -4,6 +4,8 @@ import (
 	"net"
 	"container/list"
 	"fmt"
+	"bytes"
+	"strings"
 )
 
 /** Client structure */
@@ -20,14 +22,46 @@ type Client struct {
  * @param buffer
  */
 func (c Client) Read(buffer []byte) bool {
-	bytesRead, error := c.Connection.Read(buffer)
+	_, error := c.Connection.Read(buffer)
 	if (error != nil) {
 		c.Close()
 		fmt.Errorf("Unable to read buffer client, connection close (%v)\n", error)
 		return false
 	}
-	fmt.Println(bytesRead, " bytes read")
+	// fmt.Println(bytesRead, " bytes read")
 	return true
+}
+
+/**
+ * Send data from client socket
+ * @param buffer - []byte
+ * @return int - nb bytes sent
+ */
+func (c Client) Send(buffer []byte) int {
+	count 	:= 0
+	// Add End-line char to buffer before sending
+	for i := 0; i < len(buffer); i++ {
+		if buffer[i] == 0x00 {
+			break
+		}
+		count++
+	}
+	message := strings.TrimSpace(string(buffer)) // Just for debug and server output
+	fmt.Printf("[MESSAGE][%s] %s {%d bytes}\n", c.Connection.RemoteAddr().String(), message, count)
+	c.Connection.Write([]byte(buffer)[0:count]) // Flush message to client socket
+
+	return count
+}
+
+/**
+ * Send string message from client socket
+ * @param message - string
+ */
+func (c Client) SendMessage(message string) {
+	if (len(message) != 0) {
+		buffer 	:= bytes.NewBufferString(message).Bytes()
+		c.Send(buffer)
+	}
 }
 
 /**

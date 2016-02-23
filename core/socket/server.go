@@ -5,6 +5,7 @@ import (
 	"net"
 	"container/list"
 	"bytes"
+	"strings"
 )
 
 const (
@@ -97,36 +98,27 @@ func ClientHandler(connection net.Conn, messageChannel chan string, clients *lis
 	go ClientReceiver(newClient) // Manage receiving message
 	clients.PushBack(*newClient) // Register client to server list of connected clients
 
-	// Notify all clients for the new connection
-	messageChannel <- fmt.Sprintf("Another client as joined the server %s\n", connection.RemoteAddr().String())
-}
-
-/**
- * Manage client input from server-side socket
- *
- * @param client - Client object
- */
-func ClientReceiver(client *Client) {
-	clientId := client.Connection.RemoteAddr()
-
-	buffer := make([]byte, BUFFER_SIZE)
-	for client.Read(buffer) { // While read data from server-side socket
-		if (bytes.Equal(buffer, []byte("/quit"))) { // Logout Instruction
-			client.Close()
-			break;
+	// Send Message to the current user only
+	newClient.SendMessage(fmt.Sprintf("Connection to Pilebones's Backdoor, Welcome %s\n", connection.RemoteAddr().String()))
+	newClient.SendMessage(fmt.Sprintf("To logout : press \"/quit\"\n"))
+	newClient.SendMessage(fmt.Sprintf("List of all user connected :\n"))
+	for element := clients.Front(); element != nil; element = element.Next() {
+		client := element.Value.(Client)
+		isCurrentUser := client.Connection.RemoteAddr().String() == newClient.Connection.RemoteAddr().String()
+		if (!isCurrentUser) {
+			// Notify other clients for the new connection
+			client.SendMessage(fmt.Sprintf("Another client as joined the server %s\n", connection.RemoteAddr().String()))
 		}
 
-		message := string(buffer)
-		fmt.Printf("ClientReader receiver : " + clientId.String() + " : " + message)
-
-		// Sending message to client
-		client.Outgoing <- fmt.Sprintf("[%s] %s", clientId.String(), message)
-		for i:= 0; i < BUFFER_SIZE; i++ {
-			buffer[i] = 0x00; // Char End-Line
+		message := fmt.Sprintf("- " + client.Connection.RemoteAddr().String())
+		if (isCurrentUser) {
+			message += " (you)"
 		}
+		newClient.SendMessage(message + "\n")
 	}
 
-	client.Outgoing <- fmt.Sprintf("[%s] has left the server", clientId.String())
+	// Notify all clients for the new connection
+	// messageChannel <- fmt.Sprintf("Another client as joined the server %s\n", connection.RemoteAddr().String())
 }
 
 /**
@@ -140,18 +132,8 @@ func ClientSender(client *Client) {
 		select {
 			// Standard message receive by the server from a client
 			case buffer := <- client.Incoming:
-				count := 0
-				// Add End-line char to buffer before sending
-				for i := 0; i < len(buffer); i++ {
-					if buffer[i] == 0x00 {
-						break
-					}
-					count++
-				}
 				fmt.Println("[SERVER] Sending to ", clientId.String(), ":")
-				fmt.Print("[MESSAGE] " + string(buffer))
-				fmt.Println("[MESSAGE] Size of payload : ", count)
-				client.Connection.Write([]byte(buffer)[0:count]) // Flush message to client socket
+				client.SendMessage(string(buffer))
 			// Logout instruction
 			case <- client.Quit:
 				fmt.Println("Client ", clientId.String(), " quitting")
@@ -160,4 +142,42 @@ func ClientSender(client *Client) {
 
 		}
 	}
+}
+
+/**
+ * Manage client input from server-side socket
+ *
+ * @param client - Client object
+ */
+func ClientReceiver(client *Client) {
+	clientId := client.Connection.RemoteAddr()
+
+	buffer := make([]byte, BUFFER_SIZE)
+	for client.Read(buffer) { // While read data from server-side socket
+
+		cleanedBuffer := cleanBuffer(buffer) // Remove zero bytes from buffer[BUFFER_SIZE]
+		messageTrimmed := strings.TrimSpace(string(cleanedBuffer))
+		if 0 == len(messageTrimmed) {
+			// continue // Skip empty message
+		}
+
+		fmt.Printf("ClientReader receiver from %s : \"%s\"\n", clientId.String(), messageTrimmed)
+		bufferTrimmed 	:= bytes.NewBufferString(messageTrimmed).Bytes() // buffer message whithout "\n"
+		if (bytes.Equal(bufferTrimmed, []byte("/quit"))) {
+			// if (bytes.Equal(bufferTrimmed, logoutMessage)) { // Logout Instruction
+			fmt.Printf("LOGOUT INSTRUCTIONSTRING !\n")
+			client.Close()
+			break;
+		}
+
+		// Sending message to client
+		client.Outgoing <- fmt.Sprintf("[%s] %s", clientId.String(), messageTrimmed)
+
+		// Erase all data from buffer
+		for i:= 0; i < BUFFER_SIZE; i++ {
+			buffer[i] = 0x00; // Char End-Line
+		}
+	}
+
+	client.Outgoing <- fmt.Sprintf("[%s] has left the server", clientId.String())
 }

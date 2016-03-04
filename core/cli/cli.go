@@ -3,9 +3,9 @@ package cli
 import (
 	"fmt"
 	"os"
-	"net"
 	"github.com/spf13/pflag"
 	"github.com/pilebones/backdoorGolang/core/common"
+	"github.com/pilebones/backdoorGolang/core/socket"
 )
 
 var (
@@ -72,38 +72,25 @@ func InitFlags() Context {
 
 /** Parse, Validate flags and generate CLI context Object from CLI Arguments */
 func generateContextFromFlags() Context {
+
+	target := new(socket.TargetWrapper)
+	target.Host = *host
+	target.Port = *port
+
 	context := new(Context)
-	context.Host = *host
-	context.Port = *port
-	context.IsHostIsResolved = false
+	context.Target = target
 	context.UseDebugMode = UseDebugMode()
 	context.UseListenMode = UseListenMode()
 	context.UseVerboseMode = UseVersionMode()
 
 	DisplayAsDebug("Debug mode enabled")
 
-	// Resolv hostname as net.IP
-	var ip net.IP = net.ParseIP(*host)
-	if ip == nil { // if argument isn't IP => check if the hostname can be resolved
-		ips, err := net.LookupIP(*host)
-		if err != nil {
-			panic(fmt.Sprintf("Couln't resolv hostname \"%s\"", *host))
-		} else {
-			context.Host = *host
-			if 1 < len(ips) {
-				context.IsHostIsResolved = true
-				context.Ipv4 = ips[1]
-				context.Ipv6 = ips[0]
-			} else {
-				panic(fmt.Sprintf("Couln't resolv from hostname IPv4  \"%s\"", *host))
-			}
-		}
-	} else {
-		context.Ipv4 = ip.To4()
-		context.Ipv6 = ip.To16()
+	// Resolv hostname as net.IP if possible
+	if (!target.HostCanBeResolv()) {
+		panic(fmt.Sprintf(`Invalid host : Couln't resolv "%s"`, *host))
 	}
 
-	DisplayAsDebug(context.ToString())
+	DisplayAsDebug(context.PrettyString())
 
 	return *context
 }

@@ -1,4 +1,4 @@
-package socket
+package server
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"container/list"
 	"bytes"
 	"strings"
+	"github.com/pilebones/backdoorGolang/core/socket"
 )
 
 const (
@@ -17,21 +18,29 @@ const (
 
 /** Server structure */
 type ServerProvider struct {
-	Host string
-	Port int
+	target *socket.TargetWrapper
 	UseDebugMode bool
 	Clients *list.List
 }
 
+
 /** Init server instance */
-func CreateServer(host string, port int, useDebugMode bool) ServerProvider {
+/*func Create(socketWrapper socket.SocketWrapper) ServerProvider {
 	server := new(ServerProvider)
-	server.Host = host
-	server.Port = port
-	server.UseDebugMode = useDebugMode
+	server.SocketWrapper = socketWrapper
 	server.Clients = list.New()
 
 	return * server
+}*/
+
+/** Init server instance */
+func Create(target *socket.TargetWrapper, useDebugMode bool) ServerProvider {
+	server := new(ServerProvider)
+	server.target = target
+	server.UseDebugMode = useDebugMode
+	server.Clients = list.New()
+
+	return *server
 }
 
 func (s ServerProvider) Start() {
@@ -41,7 +50,8 @@ func (s ServerProvider) Start() {
 	go IOHandler(in, s.Clients) // Init clients channel for message (async management)
 
 	// Listen on all <host>:<port>
-	serverAddr := fmt.Sprintf("%s:%d", s.Host, s.Port)
+	// serverAddr := fmt.Sprintf("%s:%d", s.SocketWrapper.Host, s.SocketWrapper.Port)
+	serverAddr := fmt.Sprintf("%s:%d", s.target.Host, s.target.Port)
 	listener, err := net.Listen("tcp", serverAddr)
 	if err != nil {
 		panic(err.Error())

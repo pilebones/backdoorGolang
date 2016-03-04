@@ -2,37 +2,31 @@ package cli
 
 import (
 	"fmt"
-	"net"
+	"github.com/pilebones/backdoorGolang/core/socket"
 )
 
 type Context struct {
-	Host string
-	IsHostIsResolved bool
-	Ipv4 net.IP
-	Ipv6 net.IP
-	Port int
+	Target *socket.TargetWrapper
 	UseListenMode bool
 	UseDebugMode bool
 	UseVerboseMode bool
 }
 
 /** Convert context struct type as string */
-func (c Context) ToString() string {
+func (c Context) PrettyString() string {
 
 	return fmt.Sprintf(`Host : %s
 Port : %d
-IP v4 : %s
-IP v6 : %s
-isHostIsResolved : %t
+IPv4 : %v
+IPv6 : %v
 isListenMode : %t
 isVerboseMode : %t
 isDebugMode : %t
 `,
-		c.Host,
-		c.Port,
-		c.Ipv4.String(),
-		c.Ipv6.String(),
-		c.IsHostIsResolved,
+		c.Target.Host,
+		c.Target.Port,
+		c.Target.Ipv4,
+		c.Target.Ipv6,
 		c.UseListenMode,
 		c.UseVerboseMode,
 		c.UseDebugMode,

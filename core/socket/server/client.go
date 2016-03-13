@@ -85,3 +85,10 @@ func (c Client) RemoveMe() {
 		}
 	}
 }
+
+/**
+ * Getting uniq identifier of a client
+ */
+func (c Client) GetId() string {
+	return c.Connection.RemoteAddr().String()
+}

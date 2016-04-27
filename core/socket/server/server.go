@@ -27,8 +27,8 @@ type Server struct {
 
 /** Init server instance */
 func Create(target *socket.Target, useDebugMode bool) Server {
-	server := Server{socket.SocketContext{target, useDebugMode}, list.New()}
-	return *server
+	server := Server{socket.SocketContext{Target: target, UseDebugMode: useDebugMode}, list.New()}
+	return server
 }
 
 func (s Server) Start() {

@@ -3,18 +3,19 @@ package cli
 import (
 	"fmt"
 	"os"
-	"github.com/spf13/pflag"
+
 	"github.com/pilebones/backdoorGolang/core/common"
 	"github.com/pilebones/backdoorGolang/core/socket"
+	"github.com/spf13/pflag"
 )
 
 var (
-	host    	= pflag.StringP("host", "h", "localhost", "Set hostname to use")
-	port    	= pflag.IntP("port", "p", 9876, "Set port number to use")
-	isListenMode 	= pflag.BoolP("listen", "l", false, "Enable listen mode (server socket mode)")
-	isVerboseMode 	= pflag.BoolP("verbose", "v", false, "Enable mode verbose")
-	isDebugMode 	= pflag.BoolP("debug", "d", false, "Enable mode debug")
-	isVersionMode 	= pflag.BoolP("version", "V", false, "Display version number")
+	host          = pflag.StringP("host", "h", "localhost", "Set hostname to use")
+	port          = pflag.IntP("port", "p", 9876, "Set port number to use")
+	isListenMode  = pflag.BoolP("listen", "l", false, "Enable listen mode (server socket mode)")
+	isVerboseMode = pflag.BoolP("verbose", "v", false, "Enable mode verbose")
+	isDebugMode   = pflag.BoolP("debug", "d", false, "Enable mode debug")
+	isVersionMode = pflag.BoolP("version", "V", false, "Display version number")
 )
 
 /** Print data when debug mode is enabled */
@@ -26,11 +27,10 @@ func DisplayAsDebug(message string) {
 
 /** Return true if mode use from parameter */
 func UseMode(mode *bool) bool {
-	var useMode bool = false
 	if *mode {
-		useMode = true
+		return true
 	}
-	return useMode
+	return false
 }
 
 /** Return true if debug mode is enabled */
@@ -45,6 +45,11 @@ func UseListenMode() bool {
 
 /** Return true if the user want to see the program version */
 func UseVersionMode() bool {
+	return UseMode(isVersionMode)
+}
+
+/** Return true if the user want to see the program version */
+func UseVerboseMode() bool {
 	return UseMode(isVerboseMode)
 }
 
@@ -63,8 +68,10 @@ func InitFlags() Context {
 	pflag.Parse()
 
 	if UseVersionMode() {
-		fmt.Printf("%s : Build %s Version %s\nAuthor : %s (see: %s)", common.PRODUCT_NAME, common.BUILD, common.VERSION, common.AUTHOR, common.CONTACT)
+		fmt.Printf("%s : Build %s Version %f\nAuthor : %s (see: %s)", common.PRODUCT_NAME, common.BUILD, common.VERSION, common.AUTHOR, common.CONTACT)
 		os.Exit(0)
+	} else {
+		fmt.Printf("%v", isVerboseMode)
 	}
 
 	return generateContextFromFlags()
@@ -86,7 +93,7 @@ func generateContextFromFlags() Context {
 	DisplayAsDebug("Debug mode enabled")
 
 	// Resolv hostname as net.IP if possible
-	if (!target.HostCanBeResolv()) {
+	if !target.HostCanBeResolv() {
 		panic(fmt.Sprintf(`Invalid host : Couln't resolv "%s"`, *host))
 	}
 

@@ -1,8 +1,8 @@
 package socket
 
 import (
-	"net"
 	"fmt"
+	"net"
 )
 
 type TargetWrapper struct {
@@ -15,7 +15,6 @@ type TargetWrapper struct {
 type TargetWrapperInterface interface {
 	ResolvHost()
 	HostCanBeResolv() bool
-
 }
 
 func (c *TargetWrapper) ResolvHost() {
@@ -27,7 +26,7 @@ func (c *TargetWrapper) ResolvHost() {
 			panic(fmt.Sprintf(`Couln't resolv hostname "%s"`, c.Host))
 		}
 
-		if (0 == len(ips)) {
+		if 0 == len(ips) {
 			panic(fmt.Sprintf(`Unknow error after resolving hostname "%s"`, c.Host))
 		}
 
@@ -49,7 +48,7 @@ func (c *TargetWrapper) HostCanBeResolv() bool {
 	}()
 
 	c.ResolvHost()
-	hostHasBeenResolved = true;
+	hostHasBeenResolved = true
 
 	// Return true if Host has been resolv
 	return hostHasBeenResolved

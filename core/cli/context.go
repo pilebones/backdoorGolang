@@ -2,13 +2,14 @@ package cli
 
 import (
 	"fmt"
+
 	"github.com/pilebones/backdoorGolang/core/socket"
 )
 
 type Context struct {
-	Target *socket.TargetWrapper
-	UseListenMode bool
-	UseDebugMode bool
+	Target         *socket.Target
+	UseListenMode  bool
+	UseDebugMode   bool
 	UseVerboseMode bool
 }
 

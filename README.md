@@ -59,12 +59,12 @@ Notice : Server is multi-user capable (one server for X client)
 netcat localhost 1234
 ```
 
-###Instructions
+### Instructions
 
 Each message submit by client is sent to all backdoor's clients like a chat. 
 However, an alone chat's feature is useless, there are a set of instructions allowed by all clients which have different behavior for taking advantage of the compromised server.
 
-####Quit Instruction
+#### Quit Instruction
 
 This instruction permit to logout the current user
 
@@ -77,7 +77,7 @@ Example :
 echo "/quit"|netcat localhost 1234
 ```
 
-####Command Instruction
+#### Command Instruction
 
 This instruction permit to execute shell command from server. (OS supported : Linux, Windows)
 

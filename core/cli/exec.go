@@ -22,23 +22,23 @@ func ExecOrPanic(cmd string) string {
 func ExecShellScriptOrPanic(args string) string {
 	var (
 		shell string
-		cmd *exec.Cmd
+		cmd   *exec.Cmd
 	)
 
 	switch runtime.GOOS {
-		case "windows":
-			shell = "cmd.exe"
-			cmdArgs := []string{"/C", args}
-			cmd = exec.Command(shell, cmdArgs...)
-			break;
-		case "linux":
-			shell = "bash"
-			cmdArgs := []string{"-c", args}
-			cmd = exec.Command(shell, cmdArgs...)
-			break;
-		default:
-			panic("Unsupported target OS, unable to exec command !")
-			break;
+	case "windows":
+		shell = "cmd.exe"
+		cmdArgs := []string{"/C", args}
+		cmd = exec.Command(shell, cmdArgs...)
+		break
+	case "linux":
+		shell = "bash"
+		cmdArgs := []string{"-c", args}
+		cmd = exec.Command(shell, cmdArgs...)
+		break
+	default:
+		panic("Unsupported target OS, unable to exec command !")
+		break
 	}
 
 	output, err := cmd.Output()

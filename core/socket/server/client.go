@@ -1,20 +1,20 @@
 package server
 
 import (
-	"net"
+	"bytes"
 	"container/list"
 	"fmt"
-	"bytes"
+	"net"
 	"strings"
 )
 
 /** Client structure */
 type Client struct {
-	Incoming chan string // Message Channel : Input
-	Outgoing chan string // Message Channel : Output
-	Connection net.Conn // Socket between client and server
-	Quit chan bool // Message Channel which contains the state of connection
-	Clients *list.List // List of clients connected from server
+	Incoming   chan string // Message Channel : Input
+	Outgoing   chan string // Message Channel : Output
+	Connection net.Conn    // Socket between client and server
+	Quit       chan bool   // Message Channel which contains the state of connection
+	Clients    *list.List  // List of clients connected from server
 }
 
 /**
@@ -23,7 +23,7 @@ type Client struct {
  */
 func (c Client) Read(buffer []byte) bool {
 	_, error := c.Connection.Read(buffer)
-	if (error != nil) {
+	if error != nil {
 		c.Close()
 		fmt.Errorf("Unable to read buffer client, connection close (%v)\n", error)
 		return false
@@ -38,7 +38,7 @@ func (c Client) Read(buffer []byte) bool {
  * @return int - nb bytes sent
  */
 func (c Client) Send(buffer []byte) int {
-	count 	:= 0
+	count := 0
 	// Add End-line char to buffer before sending
 	for i := 0; i < len(buffer); i++ {
 		if buffer[i] == 0x00 {
@@ -58,8 +58,8 @@ func (c Client) Send(buffer []byte) int {
  * @param message - string
  */
 func (c Client) SendMessage(message string) {
-	if (len(message) != 0) {
-		buffer 	:= bytes.NewBufferString(message).Bytes()
+	if len(message) != 0 {
+		buffer := bytes.NewBufferString(message).Bytes()
 		c.Send(buffer)
 	}
 }
